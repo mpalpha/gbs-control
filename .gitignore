@@ -380,3 +380,9 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder
 .mfractor/
+
+# reference odv-gbs-c-firmware
+odv-gbs-c-firmware/
+
+# test compile folder
+gbs-control/
