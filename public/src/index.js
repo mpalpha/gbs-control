@@ -215,10 +215,8 @@ const createWebSocket = () => {
             const presetEl = document.querySelector(`[gbs-element-ref="${presetId}"]`);
             const activePresetButton = presetEl
                 ? presetEl.getAttribute("gbs-element-ref")
-                : null;
-            if (activePresetButton) {
-                GBSControl.ui.presetButtonList.forEach(toggleButtonActive(activePresetButton));
-            }
+                : "none";
+            GBSControl.ui.presetButtonList.forEach(toggleButtonActive(activePresetButton));
             const slotId = "slot-" + messageDataAt2;
             const activeSlotButton = document.querySelector(`[gbs-element-ref="${slotId}"]`);
             if (activeSlotButton) {
@@ -294,6 +292,9 @@ const createWebSocket = () => {
                             break;
                         case "preferScalingRgbhv":
                             toggleMethod(button, (optionByte2 & 0x02) == 0x02);
+                            break;
+                        case "disableExternalClockGenerator":
+                            toggleMethod(button, (optionByte2 & 0x04) == 0x04);
                             break;
                     }
                 });
@@ -477,6 +478,11 @@ const fetchSlotNamesAndInit = () => {
 /** Promises */
 const serial = (funcs) => funcs.reduce((promise, func) => promise.then((result) => func().then(Array.prototype.concat.bind(result))), Promise.resolve([]));
 /** helpers */
+const toggleHelp = () => {
+    let help = GBSStorage.read("help") || false;
+    GBSStorage.write("help", !help);
+    updateHelp(!help);
+};
 const toggleDeveloperMode = () => {
     const developerMode = GBSStorage.read("developerMode") || false;
     GBSStorage.write("developerMode", !developerMode);
@@ -486,6 +492,14 @@ const toggleCustomSlotFilters = () => {
     const customSlotFilters = GBSStorage.read("customSlotFilters");
     GBSStorage.write("customSlotFilters", !customSlotFilters);
     updateCustomSlotFilters(!customSlotFilters);
+};
+const updateHelp = (help) => {
+    if (help) {
+        document.body.classList.remove("gbs-help-hide");
+    }
+    else {
+        document.body.classList.add("gbs-help-hide");
+    }
 };
 const updateDeveloperMode = (developerMode) => {
     const el = document.querySelector('[gbs-section="developer"]');
@@ -882,9 +896,7 @@ const initControlMobileKeys = () => {
 };
 const initLegendHelpers = () => {
     nodelistToArray(document.querySelectorAll(".gbs-fieldset__legend--help")).forEach((e) => {
-        e.addEventListener("click", () => {
-            document.body.classList.toggle("gbs-help-hide");
-        });
+        e.addEventListener("click", toggleHelp);
     });
 };
 const initUnloadListener = () => {
@@ -997,6 +1009,14 @@ const initDeveloperMode = () => {
         updateDeveloperMode(devMode);
     }
 };
+const initHelp = () => {
+    let help = GBSStorage.read("help");
+    if (help === undefined) {
+        help = false;
+        GBSStorage.write("help", help);
+    }
+    updateHelp(help);
+};
 const gbsAlertPromise = {
     resolve: null,
     reject: null,
@@ -1052,6 +1072,7 @@ const initUI = () => {
     initControlMobileKeys();
     initUnloadListener();
     initDeveloperMode();
+    initHelp();
 };
 const main = () => {
     const ip = location.hostname;
