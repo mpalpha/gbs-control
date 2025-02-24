@@ -144,22 +144,21 @@ private:
 
     if (inPeriod == 0 || outPeriod == 0) { return false; } // safety
 
-    // allow ~4 negative (inPeriod is < outPeriod) clock cycles jitter 
-    if (abs(inPeriod - outPeriod) <= 4) {
-      /*if (inPeriod >= outPeriod) {
-        Serial.print("inPeriod >= out: ");
-        Serial.println(inPeriod - outPeriod);
+    // Replace the abs() comparison with proper unsigned comparison
+    if (inPeriod > outPeriod) {
+      if ((inPeriod - outPeriod) <= 4) {
+        bestHtotal = inHtotal;
+        return true;
       }
-      else {
-        Serial.print("inPeriod < out: ");
-        Serial.println(outPeriod - inPeriod);
-      }*/
-      bestHtotal = inHtotal;
+    } else {
+      if ((outPeriod - inPeriod) <= 4) {
+        bestHtotal = inHtotal;
+        return true;
+      }
     }
-    else {
-      // large htotal can push intermediates to 33 bits
-      bestHtotal = (uint64_t)(inHtotal * (uint64_t)inPeriod) / (uint64_t)outPeriod;
-    }
+
+    // large htotal can push intermediates to 33 bits
+    bestHtotal = (uint64_t)(inHtotal * (uint64_t)inPeriod) / (uint64_t)outPeriod;
 
     // new 08.11.19: skip this step, IF period measurement should be stable enough to give repeatable results
     //if (bestHtotal == (inHtotal + 1)) { bestHtotal -= 1; } // works well
