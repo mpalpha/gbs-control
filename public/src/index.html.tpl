@@ -154,7 +154,7 @@
                 gbs-element-ref="button1280x960"
                 gbs-role="preset"
               >
-                1280 <span>x960</span>
+                1280 <span>x768</span>
               </button>
               <button
                 class="gbs-button gbs-button__resolution"

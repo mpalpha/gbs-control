@@ -9,7 +9,7 @@
 #endif
 #else // Arduino
 // fastest, but non portable (Uno pin 11 = PB3, Mega2560 pin 11 = PB5)
-//#define digitalRead(x) bitRead(PINB, 3)
+// #define digitalRead(x) bitRead(PINB, 3)
 #include "fastpin.h"
 #define digitalRead(x) fastRead<x>()
 // no define for DEBUG_IN_PIN
@@ -19,8 +19,8 @@
 
 // FS_DEBUG:      full verbose debug over serial
 // FS_DEBUG_LED:  just blink LED (off = adjust phase, on = normal phase)
-//#define FS_DEBUG
-//#define FS_DEBUG_LED
+// #define FS_DEBUG
+// #define FS_DEBUG_LED
 // #define FRAMESYNC_DEBUG
 
 #ifdef FRAMESYNC_DEBUG
@@ -29,14 +29,16 @@
 #define fsDebugPrintf(...)
 #endif
 
-namespace MeasurePeriod {
+namespace MeasurePeriod
+{
     volatile uint32_t stopTime, startTime;
     volatile uint32_t armed;
 
     void _risingEdgeISR_prepare();
     void _risingEdgeISR_measure();
 
-    void start() {
+    void start()
+    {
         startTime = 0;
         stopTime = 0;
         armed = 0;
@@ -46,9 +48,9 @@ namespace MeasurePeriod {
     void ICACHE_RAM_ATTR _risingEdgeISR_prepare()
     {
         noInterrupts();
-        //startTime = ESP.getCycleCount();
+        // startTime = ESP.getCycleCount();
         __asm__ __volatile__("rsr %0,ccount"
-                            : "=a"(startTime));
+                             : "=a"(startTime));
         detachInterrupt(DEBUG_IN_PIN);
         armed = 1;
         attachInterrupt(DEBUG_IN_PIN, _risingEdgeISR_measure, RISING);
@@ -58,15 +60,16 @@ namespace MeasurePeriod {
     void ICACHE_RAM_ATTR _risingEdgeISR_measure()
     {
         noInterrupts();
-        //stopTime = ESP.getCycleCount();
+        // stopTime = ESP.getCycleCount();
         __asm__ __volatile__("rsr %0,ccount"
-                            : "=a"(stopTime));
+                             : "=a"(stopTime));
         detachInterrupt(DEBUG_IN_PIN);
         interrupts();
     }
-}
+} // namespace MeasurePeriod
 
-void setExternalClockGenFrequencySmooth(uint32_t freq) {
+void setExternalClockGenFrequencySmooth(uint32_t freq)
+{
     uint32_t current = rto->freqExtClockGen;
 
     rto->freqExtClockGen = freq;
@@ -228,8 +231,8 @@ private:
         }
 
         // new 08.11.19: skip this step, IF period measurement should be stable enough to give repeatable results
-        //if (bestHtotal == (inHtotal + 1)) { bestHtotal -= 1; } // works well
-        //if (bestHtotal == (inHtotal - 1)) { bestHtotal += 1; } // check with SNES + vtotal = 1000 (1280x960)
+        // if (bestHtotal == (inHtotal + 1)) { bestHtotal -= 1; } // works well
+        // if (bestHtotal == (inHtotal - 1)) { bestHtotal += 1; } // check with SNES + vtotal = 1000 (1280x960)
 
 #ifdef FS_DEBUG
         if (bestHtotal != inHtotal) {
@@ -472,11 +475,13 @@ public:
         return true;
     }
 
-    static void clearFrequency() {
+    static void clearFrequency()
+    {
         maybeFreqExt_per_videoFps = -1;
     }
 
-    static void initFrequency(float outFramesPerS, uint32_t freqExtClockGen) {
+    static void initFrequency(float outFramesPerS, uint32_t freqExtClockGen)
+    {
         /*
         This value can be interpreted in multiple ways:
 
@@ -535,7 +540,7 @@ public:
         const float esp8266_clock_freq = ESP.getCpuFreqMHz() * 1000000;
 
         // ESP CPU cycles
-        int32_t periodInput;  // int32_t periodOutput;
+        int32_t periodInput; // int32_t periodOutput;
         int32_t phase;
 
         // Frame/s
@@ -607,8 +612,8 @@ public:
         // If latency increases, boost frequency, and vice versa.
         const float latency_err_frames =
             (float)(phase - target) // cycles
-            / esp8266_clock_freq // s
-            * fpsInput; // frames
+            / esp8266_clock_freq    // s
+            * fpsInput;             // frames
 
         // 0.0038f is 2/525, the difference between SNES and Wii 240p.
         // This number is somewhat arbitrary, but works well in
@@ -622,8 +627,10 @@ public:
         // input FPS to 0.06%. This is sufficient as long as fpsInput does not
         // vary drastically from frame to frame.
         constexpr float MAX_CORRECTION = 0.0006f;
-        if (correction > MAX_CORRECTION) correction = MAX_CORRECTION;
-        if (correction < -MAX_CORRECTION) correction = -MAX_CORRECTION;
+        if (correction > MAX_CORRECTION)
+            correction = MAX_CORRECTION;
+        if (correction < -MAX_CORRECTION)
+            correction = -MAX_CORRECTION;
 
         const float rawFpsOutput = fpsInput * (1 + correction);
 

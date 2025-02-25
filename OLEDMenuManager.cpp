@@ -1,5 +1,5 @@
-/* 
-   See https://github.com/PSHarold/OLED-SSD1306-Menu 
+/*
+   See https://github.com/PSHarold/OLED-SSD1306-Menu
    for original code, license and documentation
 */
 #include "OLEDMenuManager.h"
@@ -98,21 +98,21 @@ OLEDMenuItem *OLEDMenuManager::registerItem(
 void OLEDMenuManager::drawOneItem(OLEDMenuItem *item, uint16_t yOffset, bool negative)
 {
     int16_t curScrollOffset = 0;
+
     if (negative) {
-        this->display->setColor(OLEDDISPLAY_COLOR::WHITE); // display in negative, so fill white first, then draw image in black
-        this->display->fillRect(0, yOffset, OLED_MENU_WIDTH, item->imageHeight);
-        this->display->setColor(OLEDDISPLAY_COLOR::BLACK);
+        // Draw only right selection block
+        this->display->setColor(OLEDDISPLAY_COLOR::WHITE);
+        this->display->fillRect(OLED_MENU_WIDTH - 2, yOffset, 2, item->imageHeight);
+        this->display->setColor(OLEDDISPLAY_COLOR::WHITE);
     } else {
         this->display->setColor(OLEDDISPLAY_COLOR::WHITE);
     }
 
-    uint16_t wrappingOffset = OLED_MENU_WIDTH;
+    uint16_t wrappingOffset = OLED_MENU_WIDTH + 1; // Initialize to beyond screen width
     if (item->imageWidth < OLED_MENU_WIDTH) {
-        // item width <= screen width, no scrolling
         curScrollOffset = item->alignOffset;
     } else if (item->imageWidth > OLED_MENU_WIDTH && (item == itemUnderCursor || item->alwaysScrolls)) {
 #if OLED_MENU_RESET_ALWAYS_SCROLL_ON_SELECTION
-        // scrolling items will have lead in frames (they stay still for some frames before scrolling)
         if (leadInFramesLeft == 0) {
             curScrollOffset = item->scrollOffset--;
         } else {
@@ -120,7 +120,6 @@ void OLEDMenuManager::drawOneItem(OLEDMenuItem *item, uint16_t yOffset, bool neg
         }
 #else
         if (item == itemUnderCursor && !item->alwaysScrolls) {
-            // non always-scrolling items will have lead in frames (they stay still for some frames before scrolling)
             if (leadInFramesLeft == 0) {
                 curScrollOffset = item->scrollOffset--;
             } else {
@@ -131,36 +130,49 @@ void OLEDMenuManager::drawOneItem(OLEDMenuItem *item, uint16_t yOffset, bool neg
         }
 #endif
         int16_t left = item->imageWidth + item->scrollOffset + 1;
-        wrappingOffset = left + OLED_MENU_WRAPPING_SPACE;
         if (left <= 0) {
+            wrappingOffset = OLED_MENU_WRAPPING_SPACE;
             curScrollOffset = item->scrollOffset = wrappingOffset;
-            wrappingOffset = OLED_MENU_WIDTH + 1;
         }
     } else {
-        // already zeroed, but assign again for easy understanding
         curScrollOffset = 0;
     }
+
+    // Add padding for all items except status bar to account for selection block width
+    if (yOffset > 0) {  // yOffset > 0 means it's not the status bar
+        curScrollOffset += 4;  // Account for selection block width
+    }
+
     if (item->str) {
-        // let OLEDDisplay handle text alignment
         this->display->setTextAlignment(item->alignment);
         this->display->setFont(item->font);
         this->display->drawString(curScrollOffset, yOffset, item->str);
-        if (wrappingOffset < OLED_MENU_WIDTH) {
+        // Only draw wrapped text if we're actually scrolling and need to wrap
+        if (item->imageWidth > OLED_MENU_WIDTH && wrappingOffset <= OLED_MENU_WIDTH) {
             this->display->drawString(wrappingOffset, yOffset, item->str);
         }
     } else {
+        // For images, center between the selection blocks if selected
+        if (negative) {
+            curScrollOffset = (OLED_MENU_WIDTH - item->imageWidth) / 2;
+        }
         this->display->drawXbm(curScrollOffset, yOffset, item->imageWidth, item->imageHeight, item->xbmImage);
         if (wrappingOffset < OLED_MENU_WIDTH) {
             this->display->drawXbm(wrappingOffset, yOffset, item->imageWidth, item->imageHeight, item->xbmImage);
         }
     }
 }
+
 void OLEDMenuManager::drawSubItems(OLEDMenuItem *parent)
 {
+    // Clear buffer once at the start
     display->clear();
+
     drawStatusBar(itemUnderCursor == nullptr);
     uint16_t yOffset = OLED_MENU_STATUS_BAR_HEIGHT;
     uint8_t targetPage = itemUnderCursor == nullptr ? 0 : itemUnderCursor->pageInParent;
+
+    // Draw each item
     for (int i = 0; i < parent->numSubItem; ++i) {
         OLEDMenuItem *subItem = parent->subItems[i];
 #if OLED_MENU_OVER_DRAW
@@ -180,6 +192,8 @@ void OLEDMenuManager::drawSubItems(OLEDMenuItem *parent)
             }
         }
     }
+
+    // Update display once after all drawing is complete
     display->display();
 }
 
@@ -304,20 +318,20 @@ void OLEDMenuManager::enterItem(OLEDMenuItem *item, OLEDMenuNav btn, bool isFirs
 
 void OLEDMenuManager::drawStatusBar(bool negative)
 {
-    if (negative) {
-        this->display->setColor(OLEDDISPLAY_COLOR::WHITE); // display in negative, so fill white first, then draw in black
-        this->display->fillRect(0, 0, OLED_MENU_WIDTH, OLED_MENU_STATUS_BAR_HEIGHT);
-        this->display->setColor(OLEDDISPLAY_COLOR::BLACK);
-    } else {
-        this->display->setColor(OLEDDISPLAY_COLOR::WHITE);
-    }
+    this->display->setColor(OLEDDISPLAY_COLOR::WHITE);
+
     if (peakItem() != rootItem) {
-        // not on main menu, draw back button
+        if (negative) {
+            // Draw only right selection block when selected
+            this->display->fillRect(OLED_MENU_WIDTH - 2, 0, 2, OM_STATUS_BAR_BACK_HEIGHT);
+        }
+        // Draw the back button image in both states
         this->display->drawXbm(0, 0, IMAGE_ITEM(OM_STATUS_BAR_BACK));
     } else {
         // main menu, draw some custom info
         this->display->drawXbm(0, 0, IMAGE_ITEM(OM_STATUS_CUSTOM));
     }
+
     static uint8_t totalItems = 0;
     uint8_t curIndex = 1;
     this->display->setTextAlignment(OLEDDISPLAY_TEXT_ALIGNMENT::TEXT_ALIGN_RIGHT);
@@ -383,10 +397,10 @@ void OLEDMenuManager::tick(OLEDMenuNav nav)
     }
     switch (nav) {
         case OLEDMenuNav::UP:
-            prevItem();
+            nextItem();
             break;
         case OLEDMenuNav::DOWN:
-            nextItem();
+            prevItem();
             break;
         case OLEDMenuNav::ENTER:
             if (itemUnderCursor) {

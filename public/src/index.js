@@ -605,9 +605,9 @@ const doBackup = () => {
         const backupFilesJSON = JSON.stringify(headerDescriptor);
         const backupFilesJSONSize = backupFilesJSON.length;
         const mainHeader = [
-            (backupFilesJSONSize >> 24) & 255,
-            (backupFilesJSONSize >> 16) & 255,
-            (backupFilesJSONSize >> 8) & 255,
+            (backupFilesJSONSize >> 24) & 255, // size
+            (backupFilesJSONSize >> 16) & 255, // size
+            (backupFilesJSONSize >> 8) & 255, // size
             (backupFilesJSONSize >> 0) & 255,
         ];
         const outputArray = [

@@ -54,7 +54,7 @@ struct runTimeOptions
     uint8_t applyPresetDoneStage;
     uint8_t continousStableCounter;
     uint8_t failRetryAttempts;
-    uint8_t presetID;  // PresetID
+    uint8_t presetID; // PresetID
     bool isCustomPreset;
     uint8_t HPLLState;
     uint8_t medResLineCount;

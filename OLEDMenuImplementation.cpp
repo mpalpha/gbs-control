@@ -10,6 +10,9 @@
 #include "fonts.h"
 #include "OSDManager.h"
 
+// Function declaration
+uint16_t calculateResolutionFromRegisters(uint16_t *h_display, uint16_t *v_display);
+
 typedef TV5725<GBS_ADDR> GBS;
 extern void applyPresets(uint8_t videoMode);
 extern void setOutModeHdBypass(bool bypass);
@@ -27,6 +30,40 @@ extern OLEDMenuManager oledMenu;
 extern OSDManager osdManager;
 unsigned long oledMenuFreezeStartTime;
 unsigned long oledMenuFreezeTimeoutInMS;
+
+// Standard video timing definitions
+struct VideoTiming {
+    uint16_t h_total;
+    uint16_t v_total;
+    uint16_t h_active;
+    uint16_t v_active;
+    const char* name;
+    uint16_t tolerance;  // Tolerance for timing matching
+};
+
+const VideoTiming standardTimings[] = {
+    // name        h_total  v_total  h_active  v_active  tolerance
+    {1650,    750,    1280,     720,    "720p",      20},    // 720p
+    {2200,    1125,   1920,    1080,    "1080p",     30},    // 1080p
+    {1688,    1066,   1280,    1024,    "SXGA",      20},    // 1280x1024
+    {1344,    806,    1024,    768,     "XGA",       20},    // 1280x960
+    {858,     525,    720,     480,     "480p",      10},    // 480p
+    {864,     625,    768,     576,     "576p",      10},    // 576p
+    {1800,    1000,   1280,    960,     "1280x960",  25},    // 1280x960 - adjusted timing
+};
+
+// Helper function to match timings against standards
+const VideoTiming* matchStandardTiming(uint16_t h_total, uint16_t v_total) {
+    for (const auto& timing : standardTimings) {
+        bool h_match = abs((int)h_total - (int)timing.h_total) <= timing.tolerance;
+        bool v_match = abs((int)v_total - (int)timing.v_total) <= timing.tolerance;
+
+        if (h_match && v_match) {
+            return &timing;
+        }
+    }
+    return nullptr;
+}
 
 bool resolutionMenuHandler(OLEDMenuManager *manager, OLEDMenuItem *item, OLEDMenuNav, bool isFirstTime)
 {
@@ -243,45 +280,71 @@ bool currentSettingHandler(OLEDMenuManager *manager, OLEDMenuItem *, OLEDMenuNav
         uint8_t currentInput = GBS::ADC_INPUT_SEL::read();
         rto->presetID = GBS::GBS_PRESET_ID::read();
 
-        display.setFont(URW_Gothic_L_Book_20);
+        display.setFont(ArialMT_Plain_16);
         display.setTextAlignment(TEXT_ALIGN_LEFT);
 
+        // Line 1: Mode Resolution with label
+        display.drawString(0, 0, "Mode: ");
         if (rto->presetID == 0x01 || rto->presetID == 0x11) {
-            display.drawString(0, 0, "1280x960");
+            display.drawString(45, 0, "1280x960");
         } else if (rto->presetID == 0x02 || rto->presetID == 0x12) {
-            display.drawString(0, 0, "1280x1024");
+            display.drawString(45, 0, "1280x1024");
         } else if (rto->presetID == 0x03 || rto->presetID == 0x13) {
-            display.drawString(0, 0, "1280x720");
+            display.drawString(45, 0, "1280x720");
         } else if (rto->presetID == 0x05 || rto->presetID == 0x15) {
-            display.drawString(0, 0, "1920x1080");
+            display.drawString(45, 0, "1920x1080");
         } else if (rto->presetID == 0x06 || rto->presetID == 0x16) {
-            display.drawString(0, 0, "Downscale");
+            display.drawString(45, 0, "Downscale");
         } else if (rto->presetID == 0x04) {
-            display.drawString(0, 0, "720x480");
+            display.drawString(45, 0, "720x480");
         } else if (rto->presetID == 0x14) {
-            display.drawString(0, 0, "768x576");
+            display.drawString(45, 0, "768x576");
         } else {
-            display.drawString(0, 0, "bypass");
+            display.drawString(45, 0, "bypass");
         }
 
-        display.drawString(0, 20, String(ofr, 5) + "Hz");
-
+        // Line 2: Input Type and Sync Status with label
+        display.drawString(0, 14, "In:   ");
         if (currentInput == 1) {
-            display.drawString(0, 41, "RGB");
-        } else {
-            display.drawString(0, 41, "YpBpR");
-        }
-
-        if (currentInput == 1) {
+            display.drawString(45, 14, "RGB");
             vsyncActive = GBS::STATUS_SYNC_PROC_VSACT::read();
             if (vsyncActive) {
-                display.drawString(70, 41, "V");
+                display.drawString(85, 14, "V");
                 hsyncActive = GBS::STATUS_SYNC_PROC_HSACT::read();
                 if (hsyncActive) {
-                    display.drawString(53, 41, "H");
+                    display.drawString(70, 14, "H");
                 }
             }
+        } else {
+            display.drawString(45, 14, "YpBpR");
         }
+
+        // Line 3: Actual Resolution with label
+        display.drawString(0, 28, "Out:  ");
+        uint16_t h_display = 0;
+        uint16_t v_display = 0;
+        bool valid_resolution = calculateResolutionFromRegisters(&h_display, &v_display);
+
+        if (valid_resolution) {
+            char resolution[32];
+            // Check for interlaced signal conditions
+            uint16_t v_total = GBS::STATUS_SYNC_PROC_VTOTAL::read();
+            uint16_t v_period = GBS::VPERIOD_IF::read();
+            bool is_interlaced = (v_total > 570 && v_total < 580) && (v_period > 1100);
+
+            if (is_interlaced) {
+                sprintf(resolution, "%dx%di", h_display, v_display);
+            } else {
+                sprintf(resolution, "%dx%d", h_display, v_display);
+            }
+            display.drawString(45, 28, resolution);
+        } else {
+            display.drawString(45, 28, "unknown");
+        }
+
+        // Line 4: Refresh Rate with label
+        display.drawString(0, 42, "Frq:  ");
+        display.drawString(45, 42, String(ofr, 4) + "Hz");
     }
     display.display();
     lastUpdateTime = millis();
@@ -382,6 +445,161 @@ bool osdMenuHanlder(OLEDMenuManager *manager, OLEDMenuItem *, OLEDMenuNav nav, b
     }
     return true;
 }
+
+// Function to calculate resolution from status registers
+uint16_t calculateResolutionFromRegisters(uint16_t *h_display, uint16_t *v_display) {
+    // Read horizontal period and total from status registers
+    uint16_t h_period = GBS::HPERIOD_IF::read();
+    uint16_t v_period = GBS::VPERIOD_IF::read();
+    uint16_t h_total = GBS::STATUS_SYNC_PROC_HTOTAL::read();
+    uint16_t v_total = GBS::STATUS_SYNC_PROC_VTOTAL::read();
+
+    // Debug print raw values
+    Serial.printf("Raw values - H: %d, V: %d, HTotal: %d, VTotal: %d\n",
+                 h_period, v_period, h_total, v_total);
+
+    // In bypass mode, try to match against standard timings first
+    if (rto->outModeHdBypass) {
+        // Apply scaling factor to convert register values to actual pixel counts
+        float h_scale = 1.8f;  // Base scaling for 1280x960 timing
+
+        // Adjust scaling based on HTotal ranges and vertical resolution
+        if (h_total > 2300 && h_total < 2400) {
+            if (v_total > 570 && v_total < 580) {  // 1080i timing range
+                h_scale = 1.22f;  // Specific scaling for 1080i (2345/1920)
+            } else {
+                h_scale = 1.83f;  // Keep previous scaling for 1280x960
+            }
+        } else if (v_total > 700 && v_total < 800) {  // 720p timing range
+            h_scale = 1.65f;  // Specific scaling for 720p
+        }
+
+        uint16_t scaled_h_total = h_total / h_scale;
+        uint16_t scaled_v_total = v_total;
+
+        // Special handling for 1080i - check both v_total and v_period
+        bool is_1080i = (v_total > 570 && v_total < 580) && (v_period > 1100);
+
+        // Double v_total for interlaced signals
+        if (v_total < 600 || is_1080i) {
+            scaled_v_total *= 2;
+            Serial.printf("Interlaced signal detected (v_total: %d, v_period: %d)\n",
+                         v_total, v_period);
+        }
+
+        Serial.printf("Using scale factor: %.2f, Scaled H total: %d, V total: %d\n",
+                     h_scale, scaled_h_total, scaled_v_total);
+
+        const VideoTiming* timing = matchStandardTiming(scaled_h_total, scaled_v_total);
+        if (timing) {
+            *h_display = timing->h_active;
+            *v_display = timing->v_active;
+            Serial.printf("Matched standard timing: %s (%dx%d)\n",
+                        timing->name, timing->h_active, timing->v_active);
+            return 1;
+        }
+
+        // If no match found, calculate based on the scaled totals
+        uint16_t h_active = (scaled_h_total * 85) / 100;  // Typical 85% active pixels
+        uint16_t v_active = (scaled_v_total * 95) / 100;  // Typical 95% active lines
+
+        // Special handling for 1080i/p modes and 720p
+        if (is_1080i || (scaled_v_total > 1000 && scaled_v_total < 1200)) {
+            h_active = 1920;
+            v_active = 1080;
+            Serial.printf("Forcing 1080 mode (is_1080i: %d)\n", is_1080i);
+        } else if (v_total > 700 && v_total < 800) {  // 720p range
+            h_active = 1280;
+            v_active = 720;
+            Serial.printf("Forcing 720p mode\n");
+        } else {
+            // Round to nearest standard resolution
+            if (h_active >= 1100 && h_active <= 1400) {
+                h_active = 1280;
+            } else if (h_active > 1400) {
+                h_active = 1920;
+            } else if (h_active > 900) {
+                h_active = 1024;
+            }
+
+            if (v_active >= 900 && v_active <= 1000) {
+                v_active = 960;
+            } else if (v_active > 700 && v_active <= 800) {
+                v_active = 768;
+            } else if (v_active > 500) {
+                v_active = 600;
+            }
+        }
+
+        *h_display = h_active;
+        *v_display = v_active;
+
+        Serial.printf("Calculated bypass resolution: %dx%d (from scaled %dx%d)\n",
+                    h_active, v_active, scaled_h_total, scaled_v_total);
+        return 1;
+    }
+
+    // If not in bypass mode or no standard timing match, proceed with normal calculation
+    uint16_t h_blank_start = GBS::VDS_DIS_HB_ST::read() % h_total;
+    uint16_t h_blank_stop = GBS::VDS_DIS_HB_SP::read() % h_total;
+    uint16_t h_display_val;
+
+    // Calculate blanking period with wraparound handling
+    uint16_t h_blank_period;
+    if (h_blank_start > h_blank_stop) {
+        h_blank_period = h_blank_stop + (h_total - h_blank_start);
+    } else {
+        h_blank_period = h_blank_stop - h_blank_start;
+    }
+
+    // In bypass mode with no standard timing match, use typical blanking ratios
+    if (rto->outModeHdBypass) {
+        // Most video standards use ~20% horizontal blanking
+        h_blank_period = h_total * 0.2;
+    } else if (h_blank_period > h_total || h_blank_period == 0) {
+        h_blank_period = h_total / 4; // Use default only if not in bypass
+    }
+
+    h_display_val = h_total - h_blank_period;
+
+    // Calculate vertical active lines
+    uint16_t v_blank_start = GBS::VDS_DIS_VB_ST::read() % v_total;
+    uint16_t v_blank_stop = GBS::VDS_DIS_VB_SP::read() % v_total;
+    uint16_t v_display_val;
+
+    // Calculate vertical blanking period with wraparound handling
+    uint16_t v_blank_period;
+    if (v_blank_start > v_blank_stop) {
+        v_blank_period = v_blank_stop + (v_total - v_blank_start);
+    } else {
+        v_blank_period = v_blank_stop - v_blank_start;
+    }
+
+    // In bypass mode with no standard timing match, use typical blanking ratios
+    if (rto->outModeHdBypass) {
+        // Most video standards use ~8% vertical blanking
+        v_blank_period = v_total * 0.08;
+    } else if (v_blank_period > v_total || v_blank_period == 0) {
+        v_blank_period = v_total / 4; // Use default only if not in bypass
+    }
+
+    v_display_val = v_total - v_blank_period;
+
+    // Apply reasonable limits to calculated values
+    if (h_display_val > 1920) h_display_val = 1920;
+    if (v_display_val > 1200) v_display_val = 1200;
+    if (h_display_val < 640) h_display_val = 640;
+    if (v_display_val < 480) v_display_val = 480;
+
+    *h_display = h_display_val;
+    *v_display = v_display_val;
+
+    // Debug print calculated values
+    Serial.printf("Calculated resolution: %dx%d\n", h_display_val, v_display_val);
+
+    return 1;
+}
+
 void initOLEDMenu()
 {
     OLEDMenuItem *root = oledMenu.rootItem;
