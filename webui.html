@@ -847,6 +847,16 @@ section[name="alert"] {
               </button>
               <button
                 class="gbs-button gbs-button__resolution"
+                gbs-message="k"
+                gbs-message-type="user"
+                gbs-click="normal"
+                gbs-element-ref="button1024x768"
+                gbs-role="preset"
+              >
+                1024 <span>x768</span>
+              </button>
+              <button
+                class="gbs-button gbs-button__resolution"
                 gbs-message="h"
                 gbs-message-type="user"
                 gbs-click="normal"
@@ -908,17 +918,9 @@ section[name="alert"] {
                 onclick="savePreset()"
                 active
               >
-                <div class="gbs-icon">add_circle_outline</div>
+                <div class="gbs-icon">fiber_manual_record</div>
                 <div>save preset</div>
               </button>
-              <button
-              class="gbs-button gbs-button__control-action gbs-button__secondary"
-              onclick="removePreset()"
-              active
-            >
-              <div class="gbs-icon">highlight_remove</div>
-              <div>remove preset</div>
-            </button>
             </div>
           </fieldset>
         </section>
@@ -1403,119 +1405,10 @@ section[name="alert"] {
                 <li>Peaking increases contrast around horizontal brightness steps, and is recommended.</li>
                 <li>Step Response increases the sharpness of horizontal color steps, and is recommended.</li>
               </ul>
-          </fieldset>
-          <fieldset class="gbs-fieldset filters">
-            <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
-              <div class="gbs-icon">wb_sunny</div>
-              <div>Сolor correction</div>
-            </legend>
-            <div class="gbs-flex">
-              <button
-                gbs-message="Z"
-                gbs-message-type="user"
-                gbs-click="repeat"
-                class="gbs-button gbs-button__control"
-              >
-                <div class="gbs-icon">add_circle_outline</div>
-                <div>Brightness</div>
-              </button>
-              <button
-                gbs-message="T"
-                gbs-message-type="user"
-                gbs-click="repeat"
-                class="gbs-button gbs-button__control"
-              >
-                <div class="gbs-icon">remove_circle_outline</div>
-                <div>Brightness</div>
-              </button>
             </div>
-            <div class="gbs-flex">
-              <button
-                gbs-message="N"
-                gbs-message-type="user"
-                gbs-click="repeat"
-                class="gbs-button gbs-button__control"
-              >
-                <div class="gbs-icon">add_circle_outline</div>
-                <div>Contrast</div>
-              </button>
-              <button
-                gbs-message="M"
-                gbs-message-type="user"
-                gbs-click="repeat"
-                class="gbs-button gbs-button__control"
-              >
-                <div class="gbs-icon">remove_circle_outline</div>
-                <div>Contrast</div>
-              </button>
-            </div>
-            <div class="gbs-flex">
-              <button
-                gbs-message="Q"
-                gbs-message-type="user"
-                gbs-click="repeat"
-                class="gbs-button gbs-button__control"
-              >
-                <div class="gbs-icon">add_circle_outline</div>
-                <div>Pb/U gain</div>
-              </button>
-              <button
-                gbs-message="H"
-                gbs-message-type="user"
-                gbs-click="repeat"
-                class="gbs-button gbs-button__control"
-              >
-                <div class="gbs-icon">remove_circle_outline</div>
-                <div>Pb/U gain</div>
-              </button>
-            </div>
-            <div class="gbs-flex">
-              <button
-                gbs-message="P"
-                gbs-message-type="user"
-                gbs-click="repeat"
-                class="gbs-button gbs-button__control"
-                >
-                <div class="gbs-icon">add_circle_outline</div>
-                <div>Pr/V gain</div>
-              </button>
-              <button
-                gbs-message="S"
-                gbs-message-type="user"
-                gbs-click="repeat"
-                class="gbs-button gbs-button__control"
-                >
-                <div class="gbs-icon">remove_circle_outline</div>
-                <div>Pr/V gain</div>
-              </button>
-            </div>
-            <div class="gbs-flex">
-              <button
-                gbs-message="O"
-                gbs-message-type="user"
-                gbs-click="repeat"
-                class="gbs-button gbs-button__control"
-              >
-              <div class="gbs-icon">info</div>
-              <div>Info</div>
-              </button>
-              <button
-                gbs-message="U"
-                gbs-message-type="user"
-                gbs-click="repeat"
-                class="gbs-button gbs-button__control"
-              >
-                <div class="gbs-icon">settings_backup_restore</div>
-                <div>Default</div>
-              </button>
-            </div>
-            <ul class="gbs-help">
-              <!-- prettier-ignore -->
-              <li>Pb/U gain - change blue-luma gain.</li>
-              <li>Pr/V gain - change red-luma gain.</li>
-            </ul>
           </fieldset>
         </section>
+
         <section name="preferences" hidden>
           <fieldset class="gbs-fieldset">
             <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
@@ -2263,6 +2156,7 @@ const GBSControl = {
         4: "button720x480",
         5: "button1920x1080",
         6: "button15kHzScaleDown",
+        7: "button1024x768",
         8: "buttonSourcePassThrough",
         9: "buttonLoadCustomPreset",
     },
@@ -2582,23 +2476,6 @@ const loadPreset = () => {
         }
     });
 };
-const removePreset = () => {
-    fetch(`/slot/remove?0&nocache=${new Date().getTime()}`).then(() => {
-        setTimeout(() => {
-            clearTimeout(GBSControl.wsTimeout);
-            // GBSControl.wsTimeout = setTimeout(timeOutWs, 6000); //TODO: calc timeout
-            fetch(`/slot/remove?1&nocache=${new Date().getTime()}`).then(() => {
-                setTimeout(() => {
-                    fetchSlotNames().then((success) => {
-                        if (success) {
-                            updateSlotNames();
-                        }
-                    });
-                }, 500);
-            });
-        }, 200);
-    });
-};
 const getSlotsHTML = () => {
     // prettier-ignore
     return [
@@ -2660,6 +2537,9 @@ const getSlotPresetName = (presetID) => {
         case 0x06:
         case 0x016:
             return "DOWNSCALE";
+        case 0x07:
+        case 0x017:
+            return "1024x768";
         case 0x04:
             return "720x480";
         case 0x14:

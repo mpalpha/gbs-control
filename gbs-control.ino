@@ -5,7 +5,9 @@
 #include "ntsc_1280x720.h"
 #include "ntsc_1280x1024.h"
 #include "ntsc_1920x1080.h"
+#include "ntsc_1024x768.h"
 #include "ntsc_downscale.h"
+#include "pal_1024x768.h"
 #include "pal_1280x720.h"
 #include "pal_1280x1024.h"
 #include "pal_1920x1080.h"
@@ -4007,6 +4009,8 @@ void doPostPresetLoadSteps()
         SerialM.print(F("1920x1080"));
     else if (rto->presetID == 0x06 || rto->presetID == 0x16)
         SerialM.print(F("downscale"));
+    else if (rto->presetID == 0x07 || rto->presetID == 0x17)
+        SerialM.print(F("1024x768"));
     else if (rto->presetID == 0x04)
         SerialM.print(F("720x480"));
     else if (rto->presetID == 0x14)
@@ -4262,6 +4266,8 @@ void applyPresets(uint8_t result)
             writeProgramArrayNew(ntsc_1920x1080, false);
         } else if (uopt->presetPreference == 6) {
             writeProgramArrayNew(ntsc_downscale, false);
+        } else if (uopt->presetPreference == 7) {
+            writeProgramArrayNew(ntsc_1024x768, false);
         }
     } else if (result == 2 || result == 4) {
         // PAL input
@@ -4292,6 +4298,8 @@ void applyPresets(uint8_t result)
             writeProgramArrayNew(pal_1920x1080, false);
         } else if (uopt->presetPreference == 6) {
             writeProgramArrayNew(pal_downscale, false);
+        } else if (uopt->presetPreference == 7) {
+            writeProgramArrayNew(pal_1024x768, false);
         }
     } else if (result == 5 || result == 6 || result == 7 || result == 13) {
         // use bypass mode for these HD sources
@@ -7646,6 +7654,10 @@ void updateWebSocketData()
                 case 0x16:
                     toSend[1] = '6';
                     break;
+                case 0x07:
+                case 0x17:
+                    toSend[1] = '7';
+                    break;
                 case PresetHdBypass: // bypass 1
                 case PresetBypassRGBHV: // bypass 2
                     toSend[1] = '8';
@@ -9065,7 +9077,8 @@ void handleType2Command(char argument)
         case 'h':
         case 'p':
         case 's':
-        case 'L': {
+        case 'L':
+        case 'k': {
             // load preset via webui
             uint8_t videoMode = getVideoMode();
             if (videoMode == 0 && GBS::STATUS_SYNC_PROC_HSACT::read())
@@ -9084,6 +9097,8 @@ void handleType2Command(char argument)
                 uopt->presetPreference = Output1080P; // 1920x1080
             if (argument == 'L')
                 uopt->presetPreference = OutputDownscale; // downscale
+            if (argument == 'k')
+                uopt->presetPreference = Output1024x768; // 1024x768
 
             rto->useHdmiSyncFix = 1; // disables sync out when programming preset
             if (rto->videoStandardInput == 14) {
@@ -10731,6 +10746,8 @@ void settingsMenuOLED()
             display.drawString(0, 0, "1920x1080");
         } else if (rto->presetID == 0x06 || rto->presetID == 0x16) {
             display.drawString(0, 0, "Downscale");
+        } else if (rto->presetID == 0x07 || rto->presetID == 0x17) {
+            display.drawString(0, 0, "1024x768");
         } else if (rto->presetID == 0x04) {
             display.drawString(0, 0, "720x480");
         } else if (rto->presetID == 0x14) {
