@@ -205,6 +205,15 @@ struct adcOptions *adco = &adcopts;
 String slotIndexMap = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~()!*:,";
 
 char serialCommand;               // Serial / Web Server commands
+
+// deferred register write from /wr endpoint (avoids blocking HTTP handler)
+static bool wrPending = false;
+static String wrReg;
+static uint16_t wrVal = 0;
+static bool wrRawPending = false;
+static uint8_t wrRawSeg = 0;
+static uint8_t wrRawAddr = 0;
+static uint8_t wrRawVal = 0;
 char userCommand;               // Serial / Web Server commands
 static uint8_t lastSegment = 0xFF; // GBS segment for direct access
 //uint8_t globalDelay; // used for dev / debug
@@ -3031,6 +3040,7 @@ boolean applyBestHTotal(uint16_t bestHTotal)
         GBS::VDS_HB_SP::write(h_blank_memory_stop_position);
         GBS::VDS_HS_ST::write(h_sync_start_position);
         GBS::VDS_HS_SP::write(h_sync_stop_position);
+
     }
 
     boolean print = 1;
@@ -7799,6 +7809,72 @@ void loop()
 
     handleWiFi(0); // WiFi + OTA + WS + MDNS, checks for server enabled + started
 
+    // process deferred raw /wr byte writes
+    if (wrRawPending) {
+        wrRawPending = false;
+        writeOneByte(0xF0, wrRawSeg);
+        writeOneByte(wrRawAddr, wrRawVal);
+        SerialM.print("wr s"); SerialM.print(wrRawSeg);
+        SerialM.print("_0x"); SerialM.print(wrRawAddr, HEX);
+        SerialM.print(" "); SerialM.println(wrRawVal);
+    }
+
+    // process deferred /wr register writes
+    if (wrPending) {
+        wrPending = false;
+        if (wrReg == "ht") { rto->forceRetime = 1; applyBestHTotal(wrVal); }
+        else if (wrReg == "vt") { set_vtotal(wrVal); }
+        else if (wrReg == "hsst") { setHSyncStartPosition(wrVal); }
+        else if (wrReg == "hssp") { setHSyncStopPosition(wrVal); }
+        else if (wrReg == "hbst") { setMemoryHblankStartPosition(wrVal); }
+        else if (wrReg == "hbsp") { setMemoryHblankStopPosition(wrVal); }
+        else if (wrReg == "hbstd") { setDisplayHblankStartPosition(wrVal); }
+        else if (wrReg == "hbspd") { setDisplayHblankStopPosition(wrVal); }
+        else if (wrReg == "vsst") { setVSyncStartPosition(wrVal); }
+        else if (wrReg == "vssp") { setVSyncStopPosition(wrVal); }
+        else if (wrReg == "vbst") { setMemoryVblankStartPosition(wrVal); }
+        else if (wrReg == "vbsp") { setMemoryVblankStopPosition(wrVal); }
+        else if (wrReg == "vbstd") { setDisplayVblankStartPosition(wrVal); }
+        else if (wrReg == "vbspd") { setDisplayVblankStopPosition(wrVal); }
+        else if (wrReg == "sog") { setAndUpdateSogLevel(wrVal); }
+        else if (wrReg == "hscale") { GBS::VDS_HSCALE::write(wrVal); }
+        else if (wrReg == "vscale") { GBS::VDS_VSCALE::write(wrVal); }
+        else if (wrReg == "ifhbst") { GBS::IF_HB_ST::write(wrVal); }
+        else if (wrReg == "ifhbsp") { GBS::IF_HB_SP::write(wrVal); }
+        else if (wrReg == "ifhbinst") { GBS::IF_HBIN_ST::write(wrVal); }
+        else if (wrReg == "ifhbinsp") { GBS::IF_HBIN_SP::write(wrVal); }
+        else if (wrReg == "ifvbst") { GBS::IF_VB_ST::write(wrVal); }
+        else if (wrReg == "ifvbsp") { GBS::IF_VB_SP::write(wrVal); }
+        else if (wrReg == "exthbst") { GBS::VDS_EXT_HB_ST::write(wrVal); }
+        else if (wrReg == "exthbsp") { GBS::VDS_EXT_HB_SP::write(wrVal); }
+        else if (wrReg == "extvbst") { GBS::VDS_EXT_VB_ST::write(wrVal); }
+        else if (wrReg == "extvbsp") { GBS::VDS_EXT_VB_SP::write(wrVal); }
+        else if (wrReg == "hdhbst") { GBS::HD_HB_ST::write(wrVal); }
+        else if (wrReg == "hdhbsp") { GBS::HD_HB_SP::write(wrVal); }
+        else if (wrReg == "hdvbst") { GBS::HD_VB_ST::write(wrVal); }
+        else if (wrReg == "hdvbsp") { GBS::HD_VB_SP::write(wrVal); }
+        else if (wrReg == "pbfetch") { GBS::PB_FETCH_NUM::write(wrVal); }
+        else if (wrReg == "pboffset") { GBS::PB_CAP_OFFSET::write(wrVal); }
+        else if (wrReg == "rfffetch") { GBS::RFF_FETCH_NUM::write(wrVal); }
+        else if (wrReg == "rffoffset") { GBS::RFF_WFF_OFFSET::write(wrVal); }
+        // input formatter registers (multi-byte fields)
+        else if (wrReg == "ifhsyncrst") { GBS::IF_HSYNC_RST::write(wrVal); }
+        else if (wrReg == "ifhbst2") { GBS::IF_HB_ST2::write(wrVal); }
+        else if (wrReg == "ifhbsp2") { GBS::IF_HB_SP2::write(wrVal); }
+        else if (wrReg == "iflinest") { GBS::IF_LINE_ST::write(wrVal); }
+        else if (wrReg == "iflinesp") { GBS::IF_LINE_SP::write(wrVal); }
+        else if (wrReg == "ifinist") { GBS::IF_INI_ST::write(wrVal); }
+        else if (wrReg == "ifldst") { GBS::IF_LD_ST::write(wrVal); }
+        // VDS output registers
+        else if (wrReg == "vdsdsp") { GBS::VDS_D_SP::write(wrVal); }
+        else if (wrReg == "ygain") { GBS::VDS_Y_GAIN::write(wrVal); }
+        else if (wrReg == "yofst") { GBS::VDS_Y_OFST::write(wrVal); }
+        else if (wrReg == "uofst") { GBS::VDS_U_OFST::write(wrVal); }
+        else if (wrReg == "vofst") { GBS::VDS_V_OFST::write(wrVal); }
+        else if (wrReg == "synclev") { GBS::VDS_SYNC_LEV::write(wrVal); }
+        SerialM.print("wr "); SerialM.print(wrReg); SerialM.print(" "); SerialM.println(wrVal);
+    }
+
     // is there a command from Terminal or web ui?
     // Serial takes precedence
     if (Serial.available()) {
@@ -9581,6 +9657,113 @@ void startWebserver()
                 userCommand = p->name().charAt(0);
             }
             request->send(200); // reply
+        }
+    });
+
+    // register write endpoint for live tuning (eliminates reflash cycle)
+    // deferred: responds immediately, executes write in loop() to avoid blocking HTTP
+    server.on("/wr", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (ESP.getFreeHeap() < 10000) {
+            request->send(503, "text/plain", "low memory");
+            return;
+        }
+        // raw segment:address mode — /wr?seg=3&addr=16&val=108 (write) or /wr?seg=3&addr=16 (read)
+        if (request->hasParam("seg") && request->hasParam("addr")) {
+            uint8_t seg = request->getParam("seg")->value().toInt();
+            uint8_t addr = (uint8_t)strtoul(request->getParam("addr")->value().c_str(), NULL, 0);
+            if (seg > 5) { request->send(400, "text/plain", "seg 0-5"); return; }
+            if (request->hasParam("val")) {
+                uint16_t val = request->getParam("val")->value().toInt();
+                if (val > 255) { request->send(400, "text/plain", "raw val 0-255"); return; }
+                wrRawSeg = seg;
+                wrRawAddr = addr;
+                wrRawVal = (uint8_t)val;
+                wrRawPending = true;
+                request->send(200, "text/plain", "ok");
+            } else {
+                // raw read
+                writeOneByte(0xF0, seg);
+                uint8_t readout;
+                readFromRegister(addr, 1, &readout);
+                String result = "s" + String(seg) + "_0x" + String(addr, HEX) + "=" + String(readout);
+                request->send(200, "text/plain", result);
+            }
+        }
+        // named register mode — /wr?reg=hscale&val=620
+        else if (request->hasParam("reg") && request->hasParam("val")) {
+            uint16_t val = request->getParam("val")->value().toInt();
+            if (val < 4096) {
+                wrReg = request->getParam("reg")->value();
+                wrVal = val;
+                wrPending = true;
+                request->send(200, "text/plain", "ok");
+            } else {
+                request->send(400, "text/plain", "val out of range");
+            }
+        }
+        // named register read — /wr?reg=hscale
+        else if (request->hasParam("reg")) {
+            String reg = request->getParam("reg")->value();
+            uint16_t val = 0;
+            bool found = true;
+            if (reg == "ht") val = GBS::VDS_HSYNC_RST::read();
+            else if (reg == "vt") val = GBS::VDS_VSYNC_RST::read();
+            else if (reg == "hsst") val = GBS::VDS_HS_ST::read();
+            else if (reg == "hssp") val = GBS::VDS_HS_SP::read();
+            else if (reg == "hbst") val = GBS::VDS_HB_ST::read();
+            else if (reg == "hbsp") val = GBS::VDS_HB_SP::read();
+            else if (reg == "hbstd") val = GBS::VDS_DIS_HB_ST::read();
+            else if (reg == "hbspd") val = GBS::VDS_DIS_HB_SP::read();
+            else if (reg == "vsst") val = GBS::VDS_VS_ST::read();
+            else if (reg == "vssp") val = GBS::VDS_VS_SP::read();
+            else if (reg == "vbst") val = GBS::VDS_VB_ST::read();
+            else if (reg == "vbsp") val = GBS::VDS_VB_SP::read();
+            else if (reg == "vbstd") val = GBS::VDS_DIS_VB_ST::read();
+            else if (reg == "vbspd") val = GBS::VDS_DIS_VB_SP::read();
+            else if (reg == "hscale") val = GBS::VDS_HSCALE::read();
+            else if (reg == "vscale") val = GBS::VDS_VSCALE::read();
+            else if (reg == "sog") val = GBS::ADC_SOGCTRL::read();
+            else if (reg == "ifhbst") val = GBS::IF_HB_ST::read();
+            else if (reg == "ifhbsp") val = GBS::IF_HB_SP::read();
+            else if (reg == "ifhbinst") val = GBS::IF_HBIN_ST::read();
+            else if (reg == "ifhbinsp") val = GBS::IF_HBIN_SP::read();
+            else if (reg == "ifvbst") val = GBS::IF_VB_ST::read();
+            else if (reg == "ifvbsp") val = GBS::IF_VB_SP::read();
+            else if (reg == "exthbst") val = GBS::VDS_EXT_HB_ST::read();
+            else if (reg == "exthbsp") val = GBS::VDS_EXT_HB_SP::read();
+            else if (reg == "extvbst") val = GBS::VDS_EXT_VB_ST::read();
+            else if (reg == "extvbsp") val = GBS::VDS_EXT_VB_SP::read();
+            else if (reg == "hdhbst") val = GBS::HD_HB_ST::read();
+            else if (reg == "hdhbsp") val = GBS::HD_HB_SP::read();
+            else if (reg == "hdvbst") val = GBS::HD_VB_ST::read();
+            else if (reg == "hdvbsp") val = GBS::HD_VB_SP::read();
+            else if (reg == "pbfetch") val = GBS::PB_FETCH_NUM::read();
+            else if (reg == "pboffset") val = GBS::PB_CAP_OFFSET::read();
+            else if (reg == "rfffetch") val = GBS::RFF_FETCH_NUM::read();
+            else if (reg == "rffoffset") val = GBS::RFF_WFF_OFFSET::read();
+            else if (reg == "ifhsyncrst") val = GBS::IF_HSYNC_RST::read();
+            else if (reg == "ifhbst2") val = GBS::IF_HB_ST2::read();
+            else if (reg == "ifhbsp2") val = GBS::IF_HB_SP2::read();
+            else if (reg == "iflinest") val = GBS::IF_LINE_ST::read();
+            else if (reg == "iflinesp") val = GBS::IF_LINE_SP::read();
+            else if (reg == "ifinist") val = GBS::IF_INI_ST::read();
+            else if (reg == "ifldst") val = GBS::IF_LD_ST::read();
+            else if (reg == "vdsdsp") val = GBS::VDS_D_SP::read();
+            else if (reg == "ygain") val = GBS::VDS_Y_GAIN::read();
+            else if (reg == "yofst") val = GBS::VDS_Y_OFST::read();
+            else if (reg == "uofst") val = GBS::VDS_U_OFST::read();
+            else if (reg == "vofst") val = GBS::VDS_V_OFST::read();
+            else if (reg == "synclev") val = GBS::VDS_SYNC_LEV::read();
+            else found = false;
+            if (found) {
+                String result = reg + "=" + String(val);
+                request->send(200, "text/plain", result);
+            } else {
+                request->send(400, "text/plain", "unknown reg");
+            }
+        }
+        else {
+            request->send(400, "text/plain", "need reg+val, reg (read), or seg+addr params");
         }
     });
 
