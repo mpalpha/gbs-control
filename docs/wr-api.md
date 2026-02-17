@@ -181,6 +181,31 @@ These are the third set of blanking registers. They control the blanking signal 
 | `uofst` | Chrominance U offset | Color offset for U (Cb) channel. |
 | `vofst` | Chrominance V offset | Color offset for V (Cr) channel. |
 | `synclev` | Sync level | Output sync signal level. |
+| `ucgain` | Chrominance U gain | Color saturation for Pb/U (blue difference) channel. |
+| `vcgain` | Chrominance V gain | Color saturation for Pr/V (red difference) channel. |
+| `pklb` | Peaking low-band gain | Edge enhancement for low-frequency horizontal detail (0-63). |
+| `pklh` | Peaking low-high-band gain | Edge enhancement for mid-frequency horizontal detail (0-63). |
+
+### ADC Per-Channel Gain/Offset
+
+| reg | What it does | Practical effect |
+|-----|-------------|-----------------|
+| `rgain` | Red ADC gain | White level for red channel. **Disables auto-gain when written.** |
+| `ggain` | Green ADC gain | White level for green channel. **Disables auto-gain when written.** |
+| `bgain` | Blue ADC gain | White level for blue channel. **Disables auto-gain when written.** |
+| `roff` | Red ADC offset | Black level for red channel. |
+| `goff` | Green ADC offset | Black level for green channel. |
+| `boff` | Blue ADC offset | Black level for blue channel. |
+
+### Scanline Tuning
+
+These registers control the scanline emulation effect. They only have visible effect when scanlines are enabled via the web UI toggle.
+
+| reg | What it does | Practical effect |
+|-----|-------------|-----------------|
+| `slstr` | Scanline strength | How dark the scanline gaps are (0 = invisible, 25 = maximum darkness). UI inverts the register value so higher = darker. Writes both Y and UV mixing offsets. Default: 2. |
+| `slsoft` | Scanline softness | Vertical IIR filter that blurs scanline edges (0 = sharp binary lines, 25 = very soft). Default: 16. |
+| `slbrt` | Scanline brightness boost | White level expansion gain to compensate for scanline darkening (0-25). Default: 8. |
 
 ### HD Bypass Blanking — Controls blanking in HD bypass/passthrough mode
 

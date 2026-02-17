@@ -246,7 +246,7 @@ body {
   text-align: right;
   vertical-align: top;
   white-space: initial;
-  width: 84px;
+  width: 72px;
 }
 
 .gbs-button__control-action {
@@ -1407,6 +1407,131 @@ section[name="alert"] {
               </ul>
             </div>
           </fieldset>
+          <fieldset class="gbs-fieldset">
+            <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
+              <div class="gbs-icon">gradient</div>
+              <div>Scanline Tuning</div>
+            </legend>
+            <!-- prettier-ignore -->
+            <ul class="gbs-help">
+              <li>Strength controls how dark the scanlines are (0 = invisible, 127 = maximum).</li>
+              <li>Softness blurs the edges between bright and dark lines (0 = sharp/binary, 127 = very soft).</li>
+              <li>Brightness Boost compensates for the overall darkening caused by scanlines.</li>
+              <li>These sliders only take effect when scanlines are enabled.</li>
+            </ul>
+            <div>
+              <label>Strength: <span id="sl-slstr-val">2</span></label>
+              <input type="range" id="sl-slstr" min="0" max="25" value="2">
+            </div>
+            <div>
+              <label>Softness: <span id="sl-slsoft-val">16</span></label>
+              <input type="range" id="sl-slsoft" min="0" max="25" value="16">
+            </div>
+            <div>
+              <label>Brightness Boost: <span id="sl-slbrt-val">8</span></label>
+              <input type="range" id="sl-slbrt" min="0" max="25" value="8">
+            </div>
+            <div class="gbs-flex">
+              <button id="sl-reset"
+                class="gbs-button gbs-button__control gbs-button__secondary">
+                <div class="gbs-icon">restart_alt</div>
+                <div>Reset Scanlines</div>
+              </button>
+            </div>
+          </fieldset>
+          <fieldset class="gbs-fieldset">
+            <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
+              <div class="gbs-icon">palette</div>
+              <div>Output Color</div>
+            </legend>
+            <!-- prettier-ignore -->
+            <ul class="gbs-help">
+              <li>Brightness adjusts the luminance offset (black level shift).</li>
+              <li>Contrast adjusts the luminance gain (white level).</li>
+              <li>Blue (Pb/U) and Red (Pr/V) adjust color saturation per channel.</li>
+              <li>Sharpness controls the peaking filter gain for edge enhancement.</li>
+              <li>Reset Colors restores all output color settings to defaults.</li>
+            </ul>
+            <div>
+              <label>Brightness: <span id="vds-yofst-val">0</span></label>
+              <input type="range" id="vds-yofst" min="0" max="255" value="0">
+            </div>
+            <div>
+              <label>Contrast: <span id="vds-ygain-val">128</span></label>
+              <input type="range" id="vds-ygain" min="0" max="255" value="128">
+            </div>
+            <div>
+              <label>Blue (Pb/U): <span id="vds-ucgain-val">28</span></label>
+              <input type="range" id="vds-ucgain" min="0" max="255" value="28">
+            </div>
+            <div>
+              <label>Red (Pr/V): <span id="vds-vcgain-val">41</span></label>
+              <input type="range" id="vds-vcgain" min="0" max="255" value="41">
+            </div>
+            <div>
+              <label>Sharpness: <span id="vds-pklb-val">32</span></label>
+              <input type="range" id="vds-pklb" min="0" max="63" value="32">
+            </div>
+            <div class="gbs-flex">
+              <button
+                gbs-message="U"
+                gbs-message-type="user"
+                gbs-click="normal"
+                class="gbs-button gbs-button__control gbs-button__secondary"
+              >
+                <div class="gbs-icon">restart_alt</div>
+                <div>Reset Colors</div>
+              </button>
+            </div>
+          </fieldset>
+          <fieldset class="gbs-fieldset">
+            <legend class="gbs-fieldset__legend gbs-fieldset__legend--help">
+              <div class="gbs-icon">tune</div>
+              <div>ADC Channels</div>
+            </legend>
+            <div>
+              <label>R Gain: <span id="adc-rgain-val">0</span></label>
+              <input type="range" id="adc-rgain" min="0" max="255" value="123">
+            </div>
+            <div>
+              <label>G Gain: <span id="adc-ggain-val">0</span></label>
+              <input type="range" id="adc-ggain" min="0" max="255" value="123">
+            </div>
+            <div>
+              <label>B Gain: <span id="adc-bgain-val">0</span></label>
+              <input type="range" id="adc-bgain" min="0" max="255" value="123">
+            </div>
+            <div>
+              <label>R Offset: <span id="adc-roff-val">0</span></label>
+              <input type="range" id="adc-roff" min="0" max="255" value="64">
+            </div>
+            <div>
+              <label>G Offset: <span id="adc-goff-val">0</span></label>
+              <input type="range" id="adc-goff" min="0" max="255" value="64">
+            </div>
+            <div>
+              <label>B Offset: <span id="adc-boff-val">0</span></label>
+              <input type="range" id="adc-boff" min="0" max="255" value="64">
+            </div>
+            <div class="gbs-flex">
+              <button
+                id="adc-reset"
+                gbs-message="G"
+                gbs-message-type="user"
+                gbs-click="normal"
+                class="gbs-button gbs-button__control gbs-button__secondary"
+              >
+                <div class="gbs-icon">restart_alt</div>
+                <div>Reset ADC</div>
+              </button>
+            </div>
+            <!-- prettier-ignore -->
+            <ul class="gbs-help">
+              <li>Gain sets white level, Offset sets black level per channel.</li>
+              <li>Changing gain disables Auto Gain.</li>
+              <li>Reset ADC restores default gain and offset values and re-enables Auto Gain.</li>
+            </ul>
+          </fieldset>
         </section>
 
         <section name="preferences" hidden>
@@ -2101,6 +2226,8 @@ section[name="alert"] {
         { name: "wantVdsLineFilter", type: "byte", size: 1 },
         { name: "wantStepResponse", type: "byte", size: 1 },
         { name: "wantPeaking", type: "byte", size: 1 },
+        { name: "viirCoef", type: "byte", size: 1 },
+        { name: "wlevGain", type: "byte", size: 1 },
     ],
 };
 const StructParser = {
@@ -3170,6 +3297,98 @@ const initUI = () => {
     initUnloadListener();
     initDeveloperMode();
     initHelp();
+    initAdcSliders();
+};
+// Registers that use two's complement signed encoding (-128..127).
+// Slider 0 = darkest (-128), 128 = neutral (0), 255 = brightest (127).
+// Transform is its own inverse: (x + 128) & 0xFF applied twice = x.
+const signedRegs = new Set(["yofst"]);
+const signedTransform = (v) => (v + 128) & 0xff;
+// Registers where higher register value = weaker effect (inverted UI sense).
+// Transform: max - v (self-inverse). Map: reg name -> max slider value.
+const invertedRegs = { slstr: 25 };
+const initWrSliders = (prefix, regs) => {
+    const refresh = () => {
+        // serialize reads: ESP8266 can't handle many concurrent requests
+        let chain = Promise.resolve();
+        regs.forEach((reg) => {
+            chain = chain.then(() => {
+                const slider = document.getElementById(`${prefix}-${reg}`);
+                const label = document.getElementById(`${prefix}-${reg}-val`);
+                if (!slider || !label)
+                    return;
+                return fetch(`http://${GBSControl.serverIP}/wr?reg=${reg}`)
+                    .then((r) => r.text())
+                    .then((t) => {
+                    const val = t.split("=")[1];
+                    if (val) {
+                        let display = parseInt(val, 10);
+                        if (signedRegs.has(reg))
+                            display = signedTransform(display);
+                        if (reg in invertedRegs)
+                            display = invertedRegs[reg] - display;
+                        slider.value = String(display);
+                        label.textContent = String(display);
+                    }
+                })
+                    .catch(() => { });
+            });
+        });
+    };
+    regs.forEach((reg) => {
+        const slider = document.getElementById(`${prefix}-${reg}`);
+        const label = document.getElementById(`${prefix}-${reg}-val`);
+        if (!slider || !label)
+            return;
+        slider.addEventListener("input", () => {
+            label.textContent = slider.value;
+        });
+        slider.addEventListener("change", () => {
+            let rawVal = slider.value;
+            if (reg in invertedRegs)
+                rawVal = invertedRegs[reg] - parseInt(slider.value, 10);
+            if (signedRegs.has(reg))
+                rawVal = signedTransform(parseInt(String(rawVal), 10));
+            fetch(`http://${GBSControl.serverIP}/wr?reg=${reg}&val=${rawVal}`).catch(() => { });
+        });
+    });
+    refresh();
+    return refresh;
+};
+const initAdcSliders = () => {
+    const adcRegs = ["rgain", "ggain", "bgain", "roff", "goff", "boff"];
+    const vdsRegs = ["yofst", "ygain", "ucgain", "vcgain", "pklb"];
+    const refreshAdc = initWrSliders("adc", adcRegs);
+    const refreshVds = initWrSliders("vds", vdsRegs);
+    // refresh sliders after ADC reset (2s delay: auto-gain needs time to converge)
+    const adcResetBtn = document.getElementById("adc-reset");
+    if (adcResetBtn) {
+        adcResetBtn.addEventListener("click", () => {
+            setTimeout(refreshAdc, 2000);
+        });
+    }
+    // refresh VDS sliders after Reset Colors
+    const colorResetBtns = document.querySelectorAll('[gbs-message="U"]');
+    colorResetBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            setTimeout(refreshVds, 500);
+        });
+    });
+    // scanline tuning sliders
+    const slRegs = ["slstr", "slsoft", "slbrt"];
+    const refreshSl = initWrSliders("sl", slRegs);
+    // reset scanline tuning to defaults from enableScanlines()
+    const slResetBtn = document.getElementById("sl-reset");
+    if (slResetBtn) {
+        slResetBtn.addEventListener("click", () => {
+            const defaults = [["slstr", 23], ["slsoft", 16], ["slbrt", 8]];
+            let chain = Promise.resolve();
+            defaults.forEach((pair) => {
+                chain = chain.then(() => fetch(`http://${GBSControl.serverIP}/wr?reg=${pair[0]}&val=${pair[1]}`).catch(() => { }));
+            });
+            chain.then(() => setTimeout(refreshSl, 300));
+        });
+    }
 };
 const main = () => {
     const ip = location.hostname;
